@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #1e1e2f;
+            --container-bg: #2a2a40;
+            --message-bg-user: #3b82f6;
+            --message-bg-other: #3a3a50;
+            --text-color: #e0e0e0;
+            --input-bg: #333;
+        }
+
+        .light-mode {
+            --bg-color: #f4f4f4;
+            --container-bg: #ffffff;
+            --message-bg-user: #4CAF50;
+            --message-bg-other: #e0e0e0;
+            --text-color: #000000;
+            --input-bg: #ddd;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 30px 10px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title {
+            margin: 10px 0 10px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .link {
+            font-size: 13px;
+            color: #fff;
+            background-color: #4CAF50;
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--container-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        #display {
+            height: 400px;
+            background: var(--bg-color);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 10px 0;
+            max-width: 90%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .bubble {
+            background: var(--message-bg-user);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 16px;
+            border-bottom-right-radius: 0;
+        }
+
+        .message.others .bubble {
+            background: var(--message-bg-other);
+            color: var(--text-color);
+            border-bottom-left-radius: 0;
+        }
+
+        .bubble span {
+            font-size: 11px;
+            margin-top: 5px;
+            opacity: 0.7;
+            display: block;
+        }
+
+        .avatar {
+            font-size: 24px;
+            user-select: none;
+        }
+
+        .form-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        input[type="text"],
+        select {
+            padding: 12px;
+            border: none;
+            border-radius: 20px;
+            outline: none;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        input[type="text"] {
+            flex: 1;
+        }
+
+        select {
+            font-size: 18px;
+        }
+
+        input[type="submit"] {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        input[type="submit"]:hover {
+            background: #45a049;
+        }
+
+        .theme-toggle {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .theme-toggle button {
+            background: transparent;
+            border: 1px solid var(--text-color);
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+</head>
+
+<body>
+
+    <h2 class="title">{{room}} - Groupe <a class="link" href="{% url 'home' %}">Changer de Groupe</a></h2>
+
+    <div class="theme-toggle">
+        <button id="toggleTheme">🌙 Basculer thème</button>
+    </div>
+
+    <div class="container">
+        <div id="display">
+            <p>Aucun message présent</p>
+        </div>
+
+        <form id="post-form" class="form-container">
+            {% csrf_token %}
+            <input type="hidden" name="username" id="username" value="{{username}}" />
+            <input type="hidden" name="room_id" id="room_id" value="{{room_details.id}}" />
+            <input type="text" name="message" id="message" placeholder="Tapez votre message..." />
+            <input type="submit" value="➤">
+        </form>
+    </div>
+
+    <script>
+        const body = document.body;
+        const themeToggle = document.getElementById('toggleTheme');
+        const savedTheme = localStorage.getItem('theme');
+
+        if (savedTheme === 'light') {
+            body.classList.add('light-mode');
+            themeToggle.textContent = '☀️ Basculer thème';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light-mode');
+            const currentTheme = body.classList.contains('light-mode') ? 'light' : 'dark';
+            localStorage.setItem('theme', currentTheme);
+            themeToggle.textContent = currentTheme === 'light' ? '☀️ Basculer thème' : '🌙 Basculer thème';
+        });
+
+        // MESSAGE AFFICHAGE
+        $(document).ready(function () {
+            var display = $("#display");
+
+            setInterval(function () {
+                $.ajax({
+                    type: 'GET',
+                    url: "/getMessages/{{room}}/",
+                    success: function (response) {
+                        const currentUser = $("#username").val();
+                        const messages = response.messages;
+                        const isAtBottom = display.scrollTop() + display.innerHeight() >= display[0].scrollHeight;
+
+                        $("#display").empty();
+
+                        messages.forEach(msg => {
+                            const date = new Date(msg.date).toLocaleString('fr-FR', {
+                                timeZone: 'Indian/Antananarivo',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                day: 'numeric',
+                                month: 'short'
+                            });
+
+                            const isUser = msg.user === currentUser;
+                            const cssClass = isUser ? "user" : "others";
+                            const avatar = isUser ? "😎" : "👤";
+
+                            const html = `
+                                <div class="message ${cssClass}">
+                                    <div class="avatar">${avatar}</div>
+                                    <div class="bubble">
+                                        <strong>${msg.user}</strong><br>
+                                        ${msg.value}
+                                        <span>${date}</span>
+                                    </div>
+                                </div>`;
+                            $("#display").append(html);
+                        });
+
+                        if (isAtBottom) {
+                            display.scrollTop(display[0].scrollHeight);
+                        }
+                    }
+                });
+            }, 500);
+
+            // ENVOI MESSAGE
+            $('#post-form').on('submit', function (e) {
+                e.preventDefault();
+
+                const emoji = $('#emojiSelect').val();
+                const message = $('#message').val() + (emoji ? ' ' + emoji : '');
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/send',
+                    data: {
+                        username: $('#username').val(),
+                        room_id: $('#room_id').val(),
+                        message: message,
+                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val(),
+                    },
+                    success: function () {
+                        $('#message').val('');
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>
+
